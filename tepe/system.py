@@ -5,6 +5,13 @@ from tepe.models import Node, PowerPlant, TransmissionLine
 
 
 class System:
+    """
+    Represents a power system.
+
+    :param list[TransmissionLine] transmission_lines: The list of transmission lines in the system.
+    :param float s_base: The base apparent power in MVA.
+    """
+
     def __init__(
         self, transmission_lines: list[TransmissionLine], s_base: float
     ) -> None:
@@ -17,6 +24,12 @@ class System:
 
     @property
     def nodes(self) -> list[Node]:
+        """
+        Get the list of nodes in the system.
+
+        :return: The list of nodes.
+        :rtype: list[Node]
+        """
         unique_nodes = set()
 
         for line in self.transmission_lines:
@@ -27,6 +40,12 @@ class System:
 
     @property
     def power_plants(self) -> list[PowerPlant]:
+        """
+        Get the list of power plants in the system.
+
+        :return: The list of power plants.
+        :rtype: list[PowerPlant]
+        """
         power_plants = []
 
         for node in self.nodes:
@@ -37,20 +56,47 @@ class System:
 
     @property
     def transmission_line_count(self) -> int:
+        """
+        Get the count of transmission lines in the system.
+
+        :return: The count of transmission lines.
+        :rtype: int
+        """
         return len(self.transmission_lines)
 
     @property
     def node_count(self) -> int:
+        """
+        Get the count of nodes in the system.
+
+        :return: The count of nodes.
+        :rtype: int
+        """
         return len(self.nodes)
 
     @property
     def power_plant_count(self) -> int:
+        """
+        Get the count of power plants in the system.
+
+        :return: The count of power plants.
+        :rtype: int
+        """
         return len(self.power_plants)
 
     def get_susceptance_matrix(self) -> np.ndarray:
-        return [1 / line.reactance for line in self.transmission_lines]
+        """
+        Get the susceptance matrix of the transmission lines.
+
+        :return: The susceptance matrix.
+        :rtype: np.ndarray
+        """
+        return np.array([1 / line.reactance for line in self.transmission_lines])
 
     def generate_variables(self) -> None:
+        """
+        Generate the optimization variables.
+        """
         # Adding binary variables to indicate whether or not transmission lines should be built
         self.x = self.model.addVars(
             [str(i) for i, line in enumerate(self.transmission_lines)],
@@ -73,6 +119,9 @@ class System:
         }
 
     def generate_power_plant_restrictions(self) -> None:
+        """
+        Generate the power plant restrictions.
+        """
         for i, power_plant in enumerate(self.power_plants):
             capacity_pu = power_plant.capacity / self.s_base
 
@@ -80,13 +129,16 @@ class System:
             self.model.addConstr(self.generator_vars_map[power_plant] >= 0)
 
     def generate_angle_restrictions(self) -> None:
+        """
+        Generate the angle restrictions.
+        """
         for angle in self.theta:
             self.model.addConstr(angle <= np.pi)
             self.model.addConstr(angle >= -np.pi)
 
     def generate_line_restrictions(self) -> None:
         """
-        Not validated
+        Generate the line restrictions.
         """
         b = self.get_susceptance_matrix()
 
@@ -112,6 +164,9 @@ class System:
                 self.model.addConstr(-b[i] * (theta_2 - theta_1) <= capacity_pu)
 
     def generate_node_restrictions(self) -> None:
+        """
+        Generate the node restrictions.
+        """
         b = self.get_susceptance_matrix()
 
         for _, node in enumerate(self.nodes):
@@ -164,12 +219,21 @@ class System:
             )
 
     def generate_restrictions(self) -> None:
+        """
+        Generate all the restrictions.
+        """
         self.generate_power_plant_restrictions()
         self.generate_angle_restrictions()
         self.generate_line_restrictions()
         self.generate_node_restrictions()
 
-    def optimize(self) -> gb.Model:
+    def optimize(self) -> None:
+        """
+        Optimize the power system.
+
+        :return: The optimized model.
+        :rtype: gb.Model
+        """
         self.generate_variables()
         self.generate_restrictions()
 
