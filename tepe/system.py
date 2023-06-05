@@ -1,3 +1,10 @@
+"""
+tepe.system
+
+This module defines the System class for representing a power system and 
+performing optimization.
+"""
+
 import gurobipy as gb
 import numpy as np
 
@@ -8,7 +15,8 @@ class System:
     """
     Represents a power system.
 
-    :param list[TransmissionLine] transmission_lines: The list of transmission lines in the system.
+    :param list[TransmissionLine] transmission_lines: The list of transmission
+        lines in the system.
     :param float s_base: The base apparent power in MVA.
     """
 
@@ -91,25 +99,31 @@ class System:
         :return: The susceptance matrix.
         :rtype: np.ndarray
         """
-        return np.array([1 / line.reactance for line in self.transmission_lines])
+        return np.array(
+            [1 / line.reactance for line in self.transmission_lines]
+        )
 
     def generate_variables(self) -> None:
         """
         Generate the optimization variables.
         """
-        # Adding binary variables to indicate whether or not transmission lines should be built
+        # Dinary variables to indicate if transmission lines should be built
         self.x = self.model.addVars(
             [str(i) for i, line in enumerate(self.transmission_lines)],
             vtype=gb.GRB.BINARY,
         )
         self.x_vars_map = {
-            line: self.x[str(i)] for i, line in enumerate(self.transmission_lines)
+            line: self.x[str(i)]
+            for i, line in enumerate(self.transmission_lines)
         }
 
         # Adding variables for power plant generators
-        self.generators = [self.model.addVar() for _ in range(self.power_plant_count)]
+        self.generators = [
+            self.model.addVar() for _ in range(self.power_plant_count)
+        ]
         self.generator_vars_map = {
-            pp: generator for pp, generator in zip(self.power_plants, self.generators)
+            pp: generator
+            for pp, generator in zip(self.power_plants, self.generators)
         }
 
         # Adding variables for the theta angles of each Node
@@ -125,7 +139,9 @@ class System:
         for i, power_plant in enumerate(self.power_plants):
             capacity_pu = power_plant.capacity / self.s_base
 
-            self.model.addConstr(self.generator_vars_map[power_plant] <= capacity_pu)
+            self.model.addConstr(
+                self.generator_vars_map[power_plant] <= capacity_pu
+            )
             self.model.addConstr(self.generator_vars_map[power_plant] >= 0)
 
     def generate_angle_restrictions(self) -> None:
@@ -160,8 +176,12 @@ class System:
 
             # Existing transmission lines:
             if line.is_real:
-                self.model.addConstr(-b[i] * (theta_1 - theta_2) <= capacity_pu)
-                self.model.addConstr(-b[i] * (theta_2 - theta_1) <= capacity_pu)
+                self.model.addConstr(
+                    -b[i] * (theta_1 - theta_2) <= capacity_pu
+                )
+                self.model.addConstr(
+                    -b[i] * (theta_2 - theta_1) <= capacity_pu
+                )
 
     def generate_node_restrictions(self) -> None:
         """
@@ -215,7 +235,8 @@ class System:
                         )
 
             self.model.addConstr(
-                gb.quicksum(generators) - loads_pu - gb.quicksum(line_terms) == 0
+                gb.quicksum(generators) - loads_pu - gb.quicksum(line_terms)
+                == 0
             )
 
     def generate_restrictions(self) -> None:

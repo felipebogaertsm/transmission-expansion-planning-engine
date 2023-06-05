@@ -1,7 +1,8 @@
 """
 tepe.models
 
-This module defines the data classes for representing power plants, loads, nodes, and transmission lines.
+This module defines the data classes for representing power plants, loads, 
+nodes, and transmission lines.
 """
 
 from dataclasses import dataclass
@@ -42,7 +43,8 @@ class Node:
 
     :param int id: The ID of the node.
     :param list[Load] loads: The list of loads associated with the node.
-    :param list[PowerPlant] power_plants: The list of power plants associated with the node.
+    :param list[PowerPlant] power_plants: The list of power plants associated
+        with the node.
     """
 
     id: int
@@ -84,8 +86,10 @@ class TransmissionLine:
     :param Node node_start: The starting node of the transmission line.
     :param Node node_end: The ending node of the transmission line.
     :param float length: The length of the transmission line.
-    :param float cost_per_mile: The cost per mile of the transmission line. Default is 1e6.
-    :param bool is_real: Indicates if the transmission line exists or not. Default is False.
+    :param float cost_per_mile: The cost per mile of the transmission line.
+        Default is 1e6.
+    :param bool is_real: Indicates if the transmission line exists or not.
+        Default is False.
     """
 
     id: str
