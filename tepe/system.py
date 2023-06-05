@@ -31,8 +31,8 @@ class System:
         self.expansion_cost = None
 
         # Variables:
-        self.x = None
-        self.x_vars_map = None
+        self.line_control = None
+        self.line_control_vars_map = None
         self.generators = None
         self.generator_vars_map = None
         self.theta = None
@@ -65,8 +65,8 @@ class System:
         power_plants = []
 
         for node in self.nodes:
-            for pp in node.power_plants:
-                power_plants.append(pp)
+            for plant in node.power_plants:
+                power_plants.append(plant)
 
         return power_plants
 
@@ -116,12 +116,12 @@ class System:
         Generate the optimization variables.
         """
         # Dinary variables to indicate if transmission lines should be built
-        self.x = self.model.addVars(
+        self.line_control = self.model.addVars(
             [str(i) for i, _ in enumerate(self.transmission_lines)],
             vtype=gb.GRB.BINARY,
         )
-        self.x_vars_map = {
-            line: self.x[str(i)]
+        self.line_control_vars_map = {
+            line: self.line_control[str(i)]
             for i, line in enumerate(self.transmission_lines)
         }
 
@@ -129,22 +129,17 @@ class System:
         self.generators = [
             self.model.addVar() for _ in range(self.power_plant_count)
         ]
-        self.generator_vars_map = {
-            pp: generator
-            for pp, generator in zip(self.power_plants, self.generators)
-        }
+        self.generator_vars_map = dict(zip(self.power_plants, self.generators))
 
         # Adding variables for the theta angles of each Node
         self.theta = [self.model.addVar() for _ in range(self.node_count)]
-        self.theta_vars_map = {
-            node: theta for node, theta in zip(self.nodes, self.theta)
-        }
+        self.theta_vars_map = dict(zip(self.nodes, self.theta))
 
     def generate_power_plant_restrictions(self) -> None:
         """
         Generate the power plant restrictions.
         """
-        for i, power_plant in enumerate(self.power_plants):
+        for power_plant in self.power_plants:
             capacity_pu = power_plant.capacity / self.s_base
 
             self.model.addConstr(
@@ -164,7 +159,7 @@ class System:
         """
         Generate the line restrictions.
         """
-        b = self.get_susceptance_matrix()
+        susceptance = self.get_susceptance_matrix()
 
         for i, line in enumerate(self.transmission_lines):
             capacity_pu = line.capacity / self.s_base
@@ -172,30 +167,32 @@ class System:
             theta_1 = self.theta_vars_map[line.node_start]
             theta_2 = self.theta_vars_map[line.node_end]
 
-            line_control_var = self.x_vars_map[line]
+            line_control_var = self.line_control_vars_map[line]
 
             # Candidate transmission lines:
             self.model.addConstr(
-                -b[i] * (theta_1 - theta_2) * line_control_var <= capacity_pu
+                -susceptance[i] * (theta_1 - theta_2) * line_control_var
+                <= capacity_pu
             )
             self.model.addConstr(
-                -b[i] * (theta_2 - theta_1) * line_control_var <= capacity_pu
+                -susceptance[i] * (theta_2 - theta_1) * line_control_var
+                <= capacity_pu
             )
 
             # Existing transmission lines:
             if line.is_real:
                 self.model.addConstr(
-                    -b[i] * (theta_1 - theta_2) <= capacity_pu
+                    -susceptance[i] * (theta_1 - theta_2) <= capacity_pu
                 )
                 self.model.addConstr(
-                    -b[i] * (theta_2 - theta_1) <= capacity_pu
+                    -susceptance[i] * (theta_2 - theta_1) <= capacity_pu
                 )
 
     def generate_node_restrictions(self) -> None:
         """
         Generate the node restrictions.
         """
-        b = self.get_susceptance_matrix()
+        susceptance = self.get_susceptance_matrix()
 
         for _, node in enumerate(self.nodes):
             generators = []
@@ -209,16 +206,16 @@ class System:
             for i, line in enumerate(self.transmission_lines):
                 if line.node_start == node:
                     line_terms.append(
-                        b[i]
+                        susceptance[i]
                         * (
                             self.theta_vars_map[line.node_start]
                             - self.theta_vars_map[line.node_end]
                         )
-                        * self.x_vars_map[line]
+                        * self.line_control_vars_map[line]
                     )
                     if line.is_real:
                         line_terms.append(
-                            b[i]
+                            susceptance[i]
                             * (
                                 self.theta_vars_map[line.node_start]
                                 - self.theta_vars_map[line.node_end]
@@ -226,16 +223,16 @@ class System:
                         )
                 elif line.node_end == node:
                     line_terms.append(
-                        b[i]
+                        susceptance[i]
                         * (
                             self.theta_vars_map[line.node_end]
                             - self.theta_vars_map[line.node_start]
                         )
-                        * self.x_vars_map[line]
+                        * self.line_control_vars_map[line]
                     )
                     if line.is_real:
                         line_terms.append(
-                            b[i]
+                            susceptance[i]
                             * (
                                 self.theta_vars_map[line.node_end]
                                 - self.theta_vars_map[line.node_start]
@@ -268,7 +265,7 @@ class System:
 
         # Objective definition:
         fob = gb.quicksum(
-            self.x[str(i)] * line.capital_cost
+            self.line_control[str(i)] * line.capital_cost
             for i, line in enumerate(self.transmission_lines)
         )
         self.model.setObjective(fob, sense=gb.GRB.MINIMIZE)

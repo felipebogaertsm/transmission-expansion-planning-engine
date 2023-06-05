@@ -18,11 +18,11 @@ class PowerPlant:
     :param float capacity: The capacity of the power plant.
     """
 
-    id: int
+    _id: int
     capacity: float
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self._id)
 
 
 @dataclass
@@ -47,12 +47,12 @@ class Node:
         with the node.
     """
 
-    id: int
+    _id: int
     loads: list[Load]
     power_plants: list[PowerPlant]
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self._id)
 
     @property
     def total_generation_capacity(self) -> float:
@@ -92,7 +92,7 @@ class TransmissionLine:
         Default is False.
     """
 
-    id: str
+    _id: str
     capacity: float
     reactance: float
     node_start: Node
@@ -102,7 +102,7 @@ class TransmissionLine:
     is_real: bool = False
 
     def __hash__(self):
-        return hash(self.id)
+        return hash(self._id)
 
     @property
     def capital_cost(self) -> float:
