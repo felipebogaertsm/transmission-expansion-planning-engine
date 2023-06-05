@@ -30,6 +30,14 @@ class System:
 
         self.expansion_cost = None
 
+        # Variables:
+        self.x = None
+        self.x_vars_map = None
+        self.generators = None
+        self.generator_vars_map = None
+        self.theta = None
+        self.theta_vars_map = None
+
     @property
     def nodes(self) -> list[Node]:
         """
@@ -109,7 +117,7 @@ class System:
         """
         # Dinary variables to indicate if transmission lines should be built
         self.x = self.model.addVars(
-            [str(i) for i, line in enumerate(self.transmission_lines)],
+            [str(i) for i, _ in enumerate(self.transmission_lines)],
             vtype=gb.GRB.BINARY,
         )
         self.x_vars_map = {
