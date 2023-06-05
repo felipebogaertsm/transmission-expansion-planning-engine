@@ -1,5 +1,10 @@
-from dataclasses import dataclass
+"""
+tepe.models
 
+This module defines the data classes for representing power plants, loads, nodes, and transmission lines.
+"""
+
+from dataclasses import dataclass
 import numpy as np
 
 
